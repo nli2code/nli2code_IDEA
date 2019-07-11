@@ -1,0 +1,30 @@
+<idea-plugin>
+    <id>edu.pku.sei.wusj.LibNLI_IDEA</id>
+    <name>LibNLI IDEA</name>
+    <vendor email="wushijun@pku.edu.cn" url="https://github.com/Wusjn">PKU.SEI</vendor>
+
+    <description><![CDATA[
+    An IDEA plugin built for LibNLI.<br>
+    <em>Supported Libraries: POI</em>
+    ]]></description>
+
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <!-- uncomment to enable plugin in all products
+    <depends>com.intellij.modules.lang</depends>
+    -->
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+        <group id="MyPlugin.NLIMenu" text="NLI" description="NLI menu">
+            <add-to-group group-id="MainMenu" anchor="last"/>
+            <action id="Myplugin.CallNLI" class="NLIAction" text="Call NLI" description="Call NLI">
+                <keyboard-shortcut first-keystroke="control shift X"  keymap="$default"/>
+            </action>
+        </group>
+    </actions>
+</idea-plugin>
