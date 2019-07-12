@@ -1,4 +1,4 @@
-package pattern;
+package Pattern;
 
 public class PatternElement {
     public String element;

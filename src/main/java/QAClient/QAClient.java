@@ -1,5 +1,8 @@
 package QAClient;
 
+import OGM.Repository;
+import OGM.entity.MethodEntity;
+import OGM.entity.TypeEntity;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Caret;
@@ -8,13 +11,14 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.psi.PsiType;
 import javafx.util.Pair;
-import pattern.HoleElement;
-import pattern.Pattern;
-import pattern.PatternElement;
+import Pattern.HoleElement;
+import Pattern.Pattern;
+import Pattern.PatternElement;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 public class QAClient {
     Document document;
@@ -32,6 +36,7 @@ public class QAClient {
         this.dataContext = event.getDataContext();
     }
     List<Pair<PsiType,String>> variableInContext;
+    //Repository repository = new Repository();
 
     public String[] setCellColorText = {
             "CellStyle style = ",
@@ -52,11 +57,11 @@ public class QAClient {
 
 
     public String[] setCellColorType = {
-            "Workbook",
+            "org.apache.poi.ss.usermodel.Workbook",
             "int",
             "java.lang.String",
             "java.lang.String[]",
-            "Cell"
+            "org.apache.poi.ss.usermodel.Cell"
     };
 
     public String[] setCellColorInfo = {
@@ -103,6 +108,15 @@ public class QAClient {
                 validOptions.add(pair.getValue());
             }
         }
+
+        //woooking
+        /*String qualifiedName = hole.type;
+        TypeEntity typeEntity = repository.getTyoe(qualifiedName);
+        Set<MethodEntity> methodEntities = typeEntity.getProducers();
+        for (MethodEntity methodEntity : methodEntities){
+            validOptions.add(methodEntity.getSignature());
+        }*/
+
         return validOptions;
     }
 
