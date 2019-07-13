@@ -1,4 +1,4 @@
-package QAClient;
+package client;
 
 import com.intellij.openapi.editor.Caret;
 import com.intellij.psi.*;

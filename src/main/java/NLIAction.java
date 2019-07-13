@@ -1,5 +1,5 @@
-import QAClient.QAClient;
-import QAClient.VariableCollector;
+import client.QAClient;
+import client.VariableCollector;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Document;

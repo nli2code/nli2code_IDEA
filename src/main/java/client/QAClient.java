@@ -1,8 +1,5 @@
-package QAClient;
+package client;
 
-import OGM.Repository;
-import OGM.entity.MethodEntity;
-import OGM.entity.TypeEntity;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Caret;
@@ -11,14 +8,13 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.psi.PsiType;
 import javafx.util.Pair;
-import Pattern.HoleElement;
-import Pattern.Pattern;
-import Pattern.PatternElement;
+import org.springframework.web.client.RestTemplate;
+import pattern.HoleElement;
+import pattern.Pattern;
+import pattern.PatternElement;
+import response.Recommendation;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class QAClient {
     Document document;
@@ -36,7 +32,6 @@ public class QAClient {
         this.dataContext = event.getDataContext();
     }
     List<Pair<PsiType,String>> variableInContext;
-    //Repository repository = new Repository();
 
     public String[] setCellColorText = {
             "CellStyle style = ",
@@ -68,7 +63,7 @@ public class QAClient {
             "Workbook",
             "Foreground Color",
             "Background Color",
-            "Fill Pattern",
+            "Fill pattern",
             "Cell"
     };
 
@@ -109,15 +104,22 @@ public class QAClient {
             }
         }
 
-        //woooking
-        /*String qualifiedName = hole.type;
-        TypeEntity typeEntity = repository.getTyoe(qualifiedName);
-        Set<MethodEntity> methodEntities = typeEntity.getProducers();
-        for (MethodEntity methodEntity : methodEntities){
-            validOptions.add(methodEntity.getSignature());
-        }*/
+        RestTemplate restTemplate = new RestTemplate();
+        Recommendation recommendation = restTemplate.getForObject("http://localhost:8080/recommendation?type=" + hole.type, Recommendation.class);
+        if (recommendation != null){
+            Set<String> methods = new HashSet<>(recommendation.getRecommendations());
+            for (String method : methods){
+                validOptions.add(method);
+            }
+        }
 
         return validOptions;
+    }
+
+    public static void main(String[] args) {
+        RestTemplate restTemplate = new RestTemplate();
+        Recommendation recommendation = restTemplate.getForObject("http://localhost:8080/recommendation?type=org.apache.poi.ss.usermodel.Cell", Recommendation.class);
+        System.out.println(recommendation.getRecommendations().get(0));
     }
 
     public void raiseQuestion(Pattern pattern, String indent){
