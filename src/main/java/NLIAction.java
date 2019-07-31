@@ -36,19 +36,20 @@ public class NLIAction extends AnAction {
         actionList.add(new AnAction("set cell color") {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
-                QAClient qaClient = new QAClient(e,variableCollector.variableInContext,importCollector.importedPackages,importCollector.importedStmtOffset);
+                QAClient qaClient = new QAClient(e, variableCollector.variableInContext, importCollector.importedPackages, importCollector.importedStmtOffset);
                 qaClient.start("set cell color");
             }
         });
         actionList.add(new AnAction("set hyperlink") {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
-                QAClient qaClient = new QAClient(e,variableCollector.variableInContext,importCollector.importedPackages,importCollector.importedStmtOffset);
+                QAClient qaClient = new QAClient(e, variableCollector.variableInContext, importCollector.importedPackages, importCollector.importedStmtOffset);
                 qaClient.start("set hyperlink");
             }
         });
         ActionGroup actionGroup = new DefaultActionGroup(actionList);
-        ListPopup popup = JBPopupFactory.getInstance().createActionGroupPopup("Please select a NLI",actionGroup,event.getDataContext(), JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,true,()->{},10);
+        ListPopup popup = JBPopupFactory.getInstance().createActionGroupPopup("Please select a NLI", actionGroup, event.getDataContext(), JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true, () -> {
+        }, 10);
         popup.showInBestPositionFor(dataContext);
 
     }

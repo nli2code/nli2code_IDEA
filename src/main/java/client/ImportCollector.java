@@ -1,6 +1,8 @@
 package client;
 
-import com.intellij.psi.*;
+import com.intellij.psi.JavaRecursiveElementWalkingVisitor;
+import com.intellij.psi.PsiImportStatement;
+import com.intellij.psi.PsiPackageStatement;
 
 import java.util.HashSet;
 import java.util.Set;
