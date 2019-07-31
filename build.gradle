@@ -15,6 +15,7 @@ repositories {
 }
 
 dependencies {
+    compile 'org.apache.poi:poi:4.0.0'
     compile 'org.neo4j:neo4j-ogm-core:3.1.6'
     compile 'org.neo4j:neo4j-ogm-bolt-driver:3.1.6' // Only add if you're using the Bolt driver
     compile 'org.slf4j:slf4j-nop:1.7.25'

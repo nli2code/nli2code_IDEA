@@ -1,3 +1,4 @@
+import client.ImportCollector;
 import client.QAClient;
 import client.VariableCollector;
 import com.intellij.openapi.actionSystem.*;
@@ -28,19 +29,21 @@ public class NLIAction extends AnAction {
 
         VariableCollector variableCollector = new VariableCollector(caret);
         psiFile.accept(variableCollector);
+        ImportCollector importCollector = new ImportCollector();
+        psiFile.accept(importCollector);
 
         List<AnAction> actionList = new ArrayList<>();
         actionList.add(new AnAction("set cell color") {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
-                QAClient qaClient = new QAClient(e,variableCollector.variableInContext);
+                QAClient qaClient = new QAClient(e,variableCollector.variableInContext,importCollector.importedPackages,importCollector.importedStmtOffset);
                 qaClient.start("set cell color");
             }
         });
         actionList.add(new AnAction("set hyperlink") {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
-                QAClient qaClient = new QAClient(e,variableCollector.variableInContext);
+                QAClient qaClient = new QAClient(e,variableCollector.variableInContext,importCollector.importedPackages,importCollector.importedStmtOffset);
                 qaClient.start("set hyperlink");
             }
         });

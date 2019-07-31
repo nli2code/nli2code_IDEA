@@ -3,14 +3,16 @@ package pattern;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class Pattern {
     public List<PatternElement> elements = new LinkedList<>();
     public List<Integer> holePos = new ArrayList<>();
     public int currentHole = 0;
     public PatternView patternView;
+    public Map<String,String> symbolFQN;
 
-    public Pattern(List<String> patternText,String functionalFeature, List<String> holesInfo, List<String> holesType, List<List<String>> holesOptions){
+    public Pattern(List<String> patternText,String functionalFeature, List<String> holesInfo, List<String> holesType, List<List<String>> holesOptions, Map<String,String> symbolFQN){
         int holeCnt = 0;
         for (int i=0;i<patternText.size();i++){
             String seg = patternText.get(i);
@@ -23,6 +25,7 @@ public class Pattern {
             }
         }
         patternView = new PatternView(functionalFeature,holesInfo);
+        this.symbolFQN = symbolFQN;
     }
 
     public String getView(String indent){
@@ -31,8 +34,11 @@ public class Pattern {
     public int getViewSize(String indent){
         return getView(indent).length();
     }
+    public int getCurrentHoleOffset(String indent){
+        return patternView.getCurrentHoleOffset(indent);
+    }
 
-    public String getCode(String indent){
+        public String getCode(String indent){
         StringBuilder sb = new StringBuilder();
         for (PatternElement element : elements){
             sb.append(element.element);
@@ -58,9 +64,9 @@ public class Pattern {
         return (HoleElement) elements.get(holePos.get(holeId));
     }
 
-    public void fill(int holeId, PatternElement expr){
-        elements.remove(holePos.get(holeId).intValue());
-        elements.add(holePos.get(holeId),expr);
+    public void fill(PatternElement expr){
+        elements.remove(holePos.get(currentHole).intValue());
+        elements.add(holePos.get(currentHole),expr);
         patternView.args.add(expr);
         currentHole += 1;
     }
