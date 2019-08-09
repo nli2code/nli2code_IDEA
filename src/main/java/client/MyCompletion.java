@@ -1,14 +1,24 @@
 package client;
 
 import com.intellij.codeInsight.lookup.LookupElement;
+import com.intellij.codeInsight.lookup.LookupElementPresentation;
+import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 public class MyCompletion extends LookupElement {
 
+    @Getter
+    @Setter
     private String myCompletion;
 
-    public MyCompletion(String myCompletion) {
-        this.myCompletion = myCompletion;
+    @Getter
+    @Setter
+    private List<String> types = null;
+
+    public MyCompletion() {
     }
 
     @NotNull
@@ -16,4 +26,11 @@ public class MyCompletion extends LookupElement {
     public String getLookupString() {
         return myCompletion;
     }
+
+    @Override
+    public void renderElement(LookupElementPresentation presentation) {
+        presentation.setItemText(getLookupString());
+        presentation.setTypeText("100%");
+    }
+
 }

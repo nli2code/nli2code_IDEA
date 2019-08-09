@@ -1,18 +1,30 @@
 package response;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
+import java.util.ArrayList;
 import java.util.List;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class Recommendation {
-    private List<String> recommendations;
+    private final List<String> recommendations = new ArrayList<>();
+    private final List<List<String>> typesList = new ArrayList<>();
+
+
+    public Recommendation() {
+    }
+
+    public void addItem(String recommendation) {
+        recommendations.add(recommendation);
+    }
+
+    public void addTypes(List<String> types) {
+        typesList.add(types);
+    }
+
 
     public List<String> getRecommendations() {
         return recommendations;
     }
 
-    public void setRecommendations(List<String> recommendations) {
-        this.recommendations = recommendations;
+    public List<List<String>> getTypesList() {
+        return typesList;
     }
 }

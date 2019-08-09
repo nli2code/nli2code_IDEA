@@ -1,5 +1,7 @@
 package client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intellij.codeInsight.lookup.*;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
@@ -8,6 +10,10 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.markup.HighlighterLayer;
+import com.intellij.openapi.editor.markup.HighlighterTargetArea;
+import com.intellij.openapi.editor.markup.RangeHighlighter;
+import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiType;
@@ -17,8 +23,13 @@ import org.springframework.web.client.RestTemplate;
 import pattern.HoleElement;
 import pattern.Pattern;
 import pattern.PatternElement;
+import response.ContextVariable;
+import response.NLI;
 import response.Recommendation;
 
+import java.awt.*;
+import java.io.IOException;
+import java.util.List;
 import java.util.*;
 
 public class QAClient {
@@ -28,19 +39,43 @@ public class QAClient {
     DataContext dataContext;
     Editor editor;
     int originalCaretOffset;
+    RangeHighlighter functionalFeatureHighlighter;
+    String NLI_PROVIDER_URL;
 
-    public QAClient(AnActionEvent event, List<Pair<PsiType, String>> variableInContext, Set<String> importedPackages, int importedStmtOffset) {
+    public QAClient(AnActionEvent event, List<Pair<PsiType, String>> variableInContext_psi, Set<String> importedPackages, int importedStmtOffset) {
         updateEvent(event);
-        this.variableInContext = variableInContext;
         this.importedPackages = importedPackages;
         this.importedStmtOffset = importedStmtOffset;
 
-        this.symbolFQN.put("CellStyle", "org.apache.poi.ss.usermodel.CellStyle");
-        this.symbolFQN.put("HSSFWorkbook", "org.apache.poi.hssf.usermodel.HSSFWorkbook");
-        this.symbolFQN.put("IndexedColors", "org.apache.poi.ss.usermodel.IndexedColors");
-        this.symbolFQN.put("FillPatternType", "org.apache.poi.ss.usermodel.FillPatternType");
-        this.symbolFQN.put("HSSFCell", "org.apache.poi.hssf.usermodel.HSSFCell");
+        for (Pair<PsiType, String> pair : variableInContext_psi) {
+            //System.out.println(pair.getKey().getCanonicalText() + " : " + pair.getValue());
+            this.variableInContext.add(new ContextVariable(pair.getKey().getCanonicalText(), pair.getValue()));
+        }
 
+        Properties properties = new Properties();
+        try {
+            properties.load(this.getClass().getResourceAsStream("/application.properties"));
+            this.NLI_PROVIDER_URL = properties.getProperty("NLI_PROVIDER_URL");
+        } catch (IOException e) {
+            e.printStackTrace();
+            this.NLI_PROVIDER_URL = "http://localhost:8080";
+        }
+
+        if(patternMap == null){
+            patternMap = new HashMap<>();
+
+            RestTemplate restTemplate = new RestTemplate();
+            NLI[] NLIs = restTemplate.getForObject(NLI_PROVIDER_URL + "/NLI", NLI[].class);
+
+            for (NLI nli : NLIs){
+                System.out.println(nli.getFunctionalFeature());
+                patternMap.put(nli.getFunctionalFeature(),nli);
+            }
+        }
+
+        for (NLI nli : patternMap.values()){
+            NLIMenu.add(new NLIEntry(nli,variableInContext));
+        }
     }
 
     private void updateEvent(AnActionEvent event) {
@@ -52,92 +87,43 @@ public class QAClient {
         this.originalCaretOffset = caret.getOffset();
     }
 
-    List<Pair<PsiType, String>> variableInContext;
+    List<ContextVariable> variableInContext = new ArrayList<>();
     Set<String> importedPackages;
     int importedStmtOffset;
-
-    public Map<String, String> symbolFQN = new HashMap<>();
-
-    public String[] setCellColorText = {
-            "CellStyle style = ",
-            "HOLE",
-            ".createCellStyle();\n",
-            "style.setFillForegroundColor(IndexedColors.",
-            "HOLE",
-            ".getIndex());\n",
-            "style.setFillBackgroundColor(IndexedColors.",
-            "HOLE",
-            ".getIndex());\n",
-            "style.setFillPattern(FillPatternType.",
-            "HOLE",
-            ");\n",
-            "HOLE",
-            ".setCellStyle(style);"
-    };
+    static HashMap<String,NLI> patternMap;
+    List<NLIEntry> NLIMenu = new ArrayList<>();
 
 
-    public String[] setCellColorType = {
-            "org.apache.poi.ss.usermodel.Workbook",
-            "int",
-            "java.lang.String",
-            "java.lang.String[]",
-            "org.apache.poi.ss.usermodel.Cell"
-    };
 
-    public String[] setCellColorInfo = {
-            "Workbook",
-            "Foreground Color",
-            "Background Color",
-            "Fill pattern",
-            "Cell"
-    };
+    public LookupElement[] getLookupElements(HoleElement hole) {
 
-    public String[][] recommendedOptions = {
-            {
-                    "new HSSFWorkbook()",
-                    "new XSSFWorkbook()"
-            },
-            {
-                    "RED",
-                    "GREEN",
-                    "AQUA"
-            },
-            {
-                    "RED",
-                    "GREEN",
-                    "AQUA"
-            },
-            {
-                    "BIG_SPOTS",
-                    "SOLID_FOREGROUND"
-            },
-            {
-                    "new HSSFCell()",
-                    "new XSSFCell()"
-            }
-    };
-
-    private List<String> getValidOption(HoleElement hole) {
-        List<String> validOptions = new ArrayList<>();
-        for (String option : hole.options) {
-            validOptions.add(option);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String variableInContextString = "";
+        try {
+            variableInContextString = objectMapper.writeValueAsString(variableInContext);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
-        for (Pair<PsiType, String> pair : variableInContext) {
-            //System.out.println(pair.getKey().getCanonicalText() + " : " + pair.getValue());
-            if (pair.getKey().getCanonicalText().equals(hole.type)) {
-                validOptions.add(pair.getValue());
-            }
-        }
+
         RestTemplate restTemplate = new RestTemplate();
-        Recommendation recommendation = restTemplate.getForObject("http://localhost:8080/recommendation?type=" + hole.type, Recommendation.class);
+        Recommendation recommendation = restTemplate.postForObject(NLI_PROVIDER_URL + "/recommendation?type=" + hole.type, variableInContextString, Recommendation.class);
+
+        List<MyCompletion> myCompletions = new ArrayList<>();
         if (recommendation != null) {
-            Set<String> methods = new HashSet<>(recommendation.getRecommendations());
-            for (String method : methods) {
-                validOptions.add(method);
+            for (int i = 0; i < recommendation.getRecommendations().size(); i++) {
+                MyCompletion myCompletion = new MyCompletion();
+                myCompletion.setMyCompletion(recommendation.getRecommendations().get(i));
+                myCompletion.setTypes(recommendation.getTypesList().get(i));
+                myCompletions.add(myCompletion);
             }
         }
 
-        return validOptions;
+        MyCompletion[] completionsToReturn = new MyCompletion[myCompletions.size()];
+        for (int i = 0; i < myCompletions.size(); i++) {
+            completionsToReturn[i] = myCompletions.get(i);
+        }
+
+        return completionsToReturn;
     }
 
     public static void main(String[] args) {
@@ -146,16 +132,8 @@ public class QAClient {
         System.out.println(recommendation.getRecommendations().get(0));
     }
 
-    public LookupElement[] getLookupElements(List<String> validOptions) {
-        MyCompletion[] myCompletions = new MyCompletion[validOptions.size()];
-        for (int i = 0; i < myCompletions.length; i++) {
-            myCompletions[i] = new MyCompletion(validOptions.get(i));
-        }
-        return myCompletions;
-    }
-
-    public void startRaiseQuestion(Pattern pattern, String indent) {
-        for (String packageToImport : pattern.symbolFQN.values()) {
+    public void updateImports(Set<String> imports) {
+        for (String packageToImport : imports) {
             if (!importedPackages.contains(packageToImport)) {
                 WriteCommandAction.runWriteCommandAction(project, () -> {
                     document.insertString(importedStmtOffset, "import " + packageToImport + ";\n");
@@ -165,9 +143,18 @@ public class QAClient {
                 importedPackages.add(packageToImport);
             }
         }
+    }
+
+
+    public void startRaiseQuestion(Pattern pattern, String indent) {
+        updateImports(new HashSet<>(pattern.symbolFQN.values()));
+
         WriteCommandAction.runWriteCommandAction(project, () -> {
             document.replaceString(caret.getOffset(), caret.getOffset(), pattern.getView(indent));
         });
+        TextAttributes highlightAttributes = new TextAttributes();
+        highlightAttributes.setForegroundColor(Color.MAGENTA);
+        functionalFeatureHighlighter = editor.getMarkupModel().addRangeHighlighter(originalCaretOffset, originalCaretOffset + pattern.getFunctionalFeature().length(), HighlighterLayer.ERROR, highlightAttributes, HighlighterTargetArea.EXACT_RANGE);
         raiseQuestion(pattern, indent, "");
     }
 
@@ -177,26 +164,38 @@ public class QAClient {
 
         if (holeId != -1) {
             HoleElement hole = pattern.getHole(holeId);
-            LookupManager lookupManager = LookupManager.getInstance(project);
             int holeOffset = pattern.getCurrentHoleOffset(indent);
             caret.moveToOffset(originalCaretOffset + holeOffset + prefix.length());
-            List<String> validOptions = getValidOption(hole);
 
-            LookupEx lookupEx = lookupManager.showLookup(editor, getLookupElements(validOptions), prefix);
+            TextAttributes highlightAttributes = new TextAttributes();
+            highlightAttributes.setForegroundColor(Color.ORANGE);
+            //highlightAttributes.setBackgroundColor(Color.LIGHT_GRAY);
+            RangeHighlighter rangeHighlighter = editor.getMarkupModel().addRangeHighlighter(caret.getVisualLineStart() + indent.length() + 4, originalCaretOffset + holeOffset, HighlighterLayer.ERROR, highlightAttributes, HighlighterTargetArea.EXACT_RANGE);
+
+            LookupManager lookupManager = LookupManager.getInstance(project);
+            LookupEx lookupEx = lookupManager.showLookup(editor, getLookupElements(hole), prefix);
             lookupEx.addLookupListener(new LookupListener() {
                 @Override
                 public void itemSelected(@NotNull LookupEvent event) {
                     MyCompletion myCompletion = (MyCompletion) event.getItem();
                     //int oldViewSize = pattern.getViewSize(indent);
                     if (myCompletion != null) {
+                        if (myCompletion.getTypes() != null) {
+                            updateImports(new HashSet<>(myCompletion.getTypes()));
+                        }
                         pattern.fill(new PatternElement(myCompletion.getLookupString()));
                     } else {
                         String mannualInput = document.getText(new TextRange(originalCaretOffset + holeOffset, caret.getOffset()));
+                        if (mannualInput.endsWith("/")) {
+                            mannualInput = mannualInput.substring(0, mannualInput.length() - 1);
+                        }
                         pattern.fill(new PatternElement(mannualInput));
                     }
                     //WriteCommandAction.runWriteCommandAction(project,()->{
                     //    document.replaceString(originalCaretOffset,originalCaretOffset + oldViewSize ,pattern.getView(indent));
                     //});
+
+                    editor.getMarkupModel().removeHighlighter(rangeHighlighter);
                     raiseQuestion(pattern, indent, "");
                 }
 
@@ -218,12 +217,14 @@ public class QAClient {
                         });
                         caret.moveToOffset(originalCaretOffset + holeOffset);
                     }
+                    editor.getMarkupModel().removeHighlighter(rangeHighlighter);
                     raiseQuestion(pattern, indent, nextPrefix);
                 }
             });
-
             //String answer = Messages.showEditableChooseDialog("Please choose an " + pattern.patternView.argsInfo.get(holeId),pattern.patternView.argsInfo.get(holeId),null,validOptions.toArray(new String[]{}),validOptions.get(0),null);
         } else {
+            editor.getMarkupModel().removeHighlighter(functionalFeatureHighlighter);
+            pattern.updateViewAndCode();
             WriteCommandAction.runWriteCommandAction(project, () -> {
                 document.replaceString(originalCaretOffset, originalCaretOffset + pattern.getViewSize(indent), pattern.getCode(indent));
             });
@@ -235,20 +236,49 @@ public class QAClient {
         //}
     }
 
-    public void start(String funcFeature) {
-        if (funcFeature.equals("set cell color")) {
-            int indentNum = caret.getOffset() - document.getLineStartOffset(document.getLineNumber(caret.getOffset()));
-            String indent = "";
-            for (int i = 0; i < indentNum; i++) {
-                indent += " ";
-            }
+    public void show(){
 
-            List<List<String>> setCellColorOptions = new ArrayList<>();
-            for (String[] option : recommendedOptions) {
-                setCellColorOptions.add(Arrays.asList(option));
+        NLIEntry[] NLIMenuArray = new NLIEntry[NLIMenu.size()];
+        NLIMenu.toArray(NLIMenuArray);
+        Arrays.sort(NLIMenuArray, Comparator.comparingInt(a -> - a.getOfferedVariable().size()));
+
+        LookupManager lookupManager = LookupManager.getInstance(project);
+        LookupEx lookupEx = lookupManager.showLookup(editor,NLIMenuArray , "");
+        lookupEx.addLookupListener(new LookupListener() {
+            @Override
+            public void itemSelected(@NotNull LookupEvent event) {
+                WriteCommandAction.runWriteCommandAction(project, () -> {
+                    document.deleteString(originalCaretOffset,caret.getOffset());
+                });
+                caret.moveToOffset(originalCaretOffset);
+
+                NLIEntry selectedNLI = (NLIEntry) event.getItem();
+                if (selectedNLI!=null){
+                    start(selectedNLI.getFunctionalFeature());
+                }
             }
-            Pattern pattern = new Pattern(Arrays.asList(setCellColorText), "set cell color", Arrays.asList(setCellColorInfo), Arrays.asList(setCellColorType), setCellColorOptions, symbolFQN);
-            startRaiseQuestion(pattern, indent);
+        });
+    }
+
+    public void start(String funcFeature) {
+        int indentNum = caret.getOffset() - document.getLineStartOffset(document.getLineNumber(caret.getOffset()));
+        String indent = "";
+        for (int i = 0; i < indentNum; i++) {
+            indent += " ";
         }
+
+        NLI nli = patternMap.get(funcFeature);
+        if (nli!=null){
+            System.out.println(nli.getFunctionalFeature());
+            startRaiseQuestion(new Pattern(nli),indent);
+        }
+
+        /*if (funcFeature.equals("set cell color")) {
+            Pattern pattern = new Pattern(Arrays.asList(setCellColorText), "set cell color", Arrays.asList(setCellColorInfo), Arrays.asList(setCellColorType), setCellColorSymbols);
+            startRaiseQuestion(pattern, indent);
+        }else if (funcFeature.equals("set hyperlink")){
+            Pattern pattern = new Pattern(Arrays.asList(setHyperlinkText), "set hyperlink", Arrays.asList(setHyperlinkInfo), Arrays.asList(setHyperlinkType), setHyperlinkSymbols);
+            startRaiseQuestion(pattern, indent);
+        }*/
     }
 }

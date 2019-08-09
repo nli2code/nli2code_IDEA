@@ -15,6 +15,7 @@ repositories {
 }
 
 dependencies {
+    compile 'org.projectlombok:lombok:1.18.8'
     compile 'org.apache.poi:poi:4.0.0'
     compile 'org.neo4j:neo4j-ogm-core:3.1.6'
     compile 'org.neo4j:neo4j-ogm-bolt-driver:3.1.6' // Only add if you're using the Bolt driver
@@ -26,7 +27,7 @@ dependencies {
 }
 
 intellij {
-    version '2018.3.5'
+    version '2019.1.3'
 }
 patchPluginXml {
     changeNotes """

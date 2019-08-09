@@ -14,12 +14,14 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class NLIAction extends AnAction {
     public NLIAction() {
         super("Hello");
     }
 
     public void actionPerformed(AnActionEvent event) {
+
         DataContext dataContext = event.getDataContext();
         Project project = event.getProject();
         Editor editor = event.getData(CommonDataKeys.EDITOR);
@@ -32,7 +34,7 @@ public class NLIAction extends AnAction {
         ImportCollector importCollector = new ImportCollector();
         psiFile.accept(importCollector);
 
-        List<AnAction> actionList = new ArrayList<>();
+        /*List<AnAction> actionList = new ArrayList<>();
         actionList.add(new AnAction("set cell color") {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
@@ -50,7 +52,9 @@ public class NLIAction extends AnAction {
         ActionGroup actionGroup = new DefaultActionGroup(actionList);
         ListPopup popup = JBPopupFactory.getInstance().createActionGroupPopup("Please select a NLI", actionGroup, event.getDataContext(), JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true, () -> {
         }, 10);
-        popup.showInBestPositionFor(dataContext);
+        popup.showInBestPositionFor(dataContext);*/
 
+        QAClient qaClient = new QAClient(event, variableCollector.variableInContext, importCollector.importedPackages, importCollector.importedStmtOffset);
+        qaClient.show();
     }
 }
