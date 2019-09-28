@@ -15,6 +15,8 @@ import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.panel.PanelBuilder;
+import com.intellij.openapi.ui.panel.PanelGridBuilder;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiType;
 import javafx.util.Pair;
@@ -27,6 +29,7 @@ import response.ContextVariable;
 import response.NLI;
 import response.Recommendation;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.util.List;
@@ -42,15 +45,11 @@ public class QAClient {
     RangeHighlighter functionalFeatureHighlighter;
     String NLI_PROVIDER_URL;
 
-    public QAClient(AnActionEvent event, List<Pair<PsiType, String>> variableInContext_psi, Set<String> importedPackages, int importedStmtOffset) {
+    public QAClient(AnActionEvent event, List<ContextVariable> variableInContext, Set<String> importedPackages, int importedStmtOffset) {
         updateEvent(event);
         this.importedPackages = importedPackages;
         this.importedStmtOffset = importedStmtOffset;
-
-        for (Pair<PsiType, String> pair : variableInContext_psi) {
-            //System.out.println(pair.getKey().getCanonicalText() + " : " + pair.getValue());
-            this.variableInContext.add(new ContextVariable(pair.getKey().getCanonicalText(), pair.getValue()));
-        }
+        this.variableInContext = new HashSet<>(variableInContext);
 
         Properties properties = new Properties();
         try {
@@ -74,7 +73,7 @@ public class QAClient {
         }
 
         for (NLI nli : patternMap.values()){
-            NLIMenu.add(new NLIEntry(nli,variableInContext));
+            NLIMenu.add(new NLIEntry(nli,this.variableInContext));
         }
     }
 
@@ -87,7 +86,7 @@ public class QAClient {
         this.originalCaretOffset = caret.getOffset();
     }
 
-    List<ContextVariable> variableInContext = new ArrayList<>();
+    Set<ContextVariable> variableInContext = new HashSet<>();
     Set<String> importedPackages;
     int importedStmtOffset;
     static HashMap<String,NLI> patternMap;
@@ -106,14 +105,15 @@ public class QAClient {
         }
 
         RestTemplate restTemplate = new RestTemplate();
-        Recommendation recommendation = restTemplate.postForObject(NLI_PROVIDER_URL + "/recommendation?type=" + hole.type, variableInContextString, Recommendation.class);
+        Recommendation recommendation = restTemplate.postForObject(NLI_PROVIDER_URL + "/recommendation?type=" + hole.type + "&info=" + hole.info, variableInContextString, Recommendation.class);
 
         List<MyCompletion> myCompletions = new ArrayList<>();
         if (recommendation != null) {
-            for (int i = 0; i < recommendation.getRecommendations().size(); i++) {
+            for (int i = 0; i < recommendation.getEntries().size(); i++) {
                 MyCompletion myCompletion = new MyCompletion();
-                myCompletion.setMyCompletion(recommendation.getRecommendations().get(i));
-                myCompletion.setTypes(recommendation.getTypesList().get(i));
+                myCompletion.setMyCompletion(recommendation.getEntries().get(i).getText());
+                myCompletion.setTypes(recommendation.getEntries().get(i).getTypeList());
+                myCompletion.setScore(recommendation.getEntries().get(i).getScore());
                 myCompletions.add(myCompletion);
             }
         }
@@ -129,7 +129,7 @@ public class QAClient {
     public static void main(String[] args) {
         RestTemplate restTemplate = new RestTemplate();
         Recommendation recommendation = restTemplate.getForObject("http://localhost:8080/recommendation?type=org.apache.poi.ss.usermodel.Cell", Recommendation.class);
-        System.out.println(recommendation.getRecommendations().get(0));
+        System.out.println(recommendation.getEntries().get(0).getText());
     }
 
     public void updateImports(Set<String> imports) {
@@ -161,6 +161,12 @@ public class QAClient {
 
     public void raiseQuestion(Pattern pattern, String indent, String prefix) {
         int holeId = pattern.getNextHoleId();
+
+
+        PanelBuilder panelBuilder = new PanelGridBuilder();
+        JPanel jPanel = panelBuilder.createPanel();
+        jPanel.add(new JEditorPane());
+
 
         if (holeId != -1) {
             HoleElement hole = pattern.getHole(holeId);
@@ -236,11 +242,17 @@ public class QAClient {
         //}
     }
 
+    private void sortTheNLIs(NLIEntry[] NLIMenuArray){
+        Arrays.sort(NLIMenuArray, Comparator.comparingInt(NLIEntry::getScore));
+        //Arrays.sort(NLIMenuArray, Comparator.comparingInt(a -> - a.getOfferedVariable().size()));
+    }
+
+
     public void show(){
 
         NLIEntry[] NLIMenuArray = new NLIEntry[NLIMenu.size()];
         NLIMenu.toArray(NLIMenuArray);
-        Arrays.sort(NLIMenuArray, Comparator.comparingInt(a -> - a.getOfferedVariable().size()));
+        sortTheNLIs(NLIMenuArray);
 
         LookupManager lookupManager = LookupManager.getInstance(project);
         LookupEx lookupEx = lookupManager.showLookup(editor,NLIMenuArray , "");

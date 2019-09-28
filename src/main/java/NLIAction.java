@@ -1,4 +1,5 @@
 import client.ImportCollector;
+import client.NewVariableCollector;
 import client.QAClient;
 import client.VariableCollector;
 import com.intellij.openapi.actionSystem.*;
@@ -29,8 +30,9 @@ public class NLIAction extends AnAction {
         Caret caret = event.getData(CommonDataKeys.CARET);
         PsiFile psiFile = event.getData(CommonDataKeys.PSI_FILE);
 
-        VariableCollector variableCollector = new VariableCollector(caret);
+        NewVariableCollector variableCollector = new NewVariableCollector(caret);
         psiFile.accept(variableCollector);
+        variableCollector.updateContextVariableProperties();
         ImportCollector importCollector = new ImportCollector();
         psiFile.accept(importCollector);
 

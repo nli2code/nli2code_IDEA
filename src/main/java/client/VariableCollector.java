@@ -44,6 +44,7 @@ public class VariableCollector extends JavaRecursiveElementWalkingVisitor {
                 variableInContext.add(new Pair<>(parameter.getType(), parameter.getName()));
             }
         }
+
         super.visitMethod(method);
     }
 

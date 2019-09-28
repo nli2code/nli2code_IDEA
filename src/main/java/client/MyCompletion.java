@@ -18,6 +18,10 @@ public class MyCompletion extends LookupElement {
     @Setter
     private List<String> types = null;
 
+    @Getter
+    @Setter
+    private double score;
+
     public MyCompletion() {
     }
 
@@ -30,7 +34,7 @@ public class MyCompletion extends LookupElement {
     @Override
     public void renderElement(LookupElementPresentation presentation) {
         presentation.setItemText(getLookupString());
-        presentation.setTypeText("100%");
+        presentation.setTypeText(score + "");
     }
 
 }
