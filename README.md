@@ -1,2 +1,2 @@
-# LibNLI_IDEA
-An IDEA plugin for LibNLI.
+# nli2code_IDEA
+An IDEA plugin for nli2code.
